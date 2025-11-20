@@ -3,14 +3,12 @@
 import { useState, useEffect, useCallback } from 'react';
 import Hero from '@/components/Hero';
 import LinksTable from '@/components/LinksTable';
-import Footer from '@/components/Footer'; // <-- Import your Footer!
 import { Link } from '@/types';
 
 export default function Home() {
   const [links, setLinks] = useState<Link[]>([]);
   const [loading, setLoading] = useState(true);
 
-  // Fetch links
   const fetchLinks = useCallback(async () => {
     try {
       const res = await fetch('/api/links', {
@@ -53,31 +51,28 @@ export default function Home() {
 
   return (
     <>
-      <main style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column' }}>
-        <Hero />
-        {loading ? (
-          <div style={{
-            textAlign: 'center',
-            padding: '4rem',
-            flex: 1,
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center'
-          }}>
-            <p style={{ color: '#6b7280', fontSize: '1.125rem' }}>
-              Loading links...
-            </p>
-          </div>
-        ) : (
-          <LinksTable
-            links={links}
-            onDelete={handleDelete}
-            onViewStats={handleViewStats}
-            onRefresh={fetchLinks}
-          />
-        )}
-      </main>
-      <Footer /> {/* <-- Add Footer here */}
+      <Hero />
+      {loading ? (
+        <div style={{
+          textAlign: 'center',
+          padding: '4rem',
+          flex: 1,
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center'
+        }}>
+          <p style={{ color: '#6b7280', fontSize: '1.125rem' }}>
+            Loading links...
+          </p>
+        </div>
+      ) : (
+        <LinksTable
+          links={links}
+          onDelete={handleDelete}
+          onViewStats={handleViewStats}
+          onRefresh={fetchLinks}
+        />
+      )}
     </>
   );
 }

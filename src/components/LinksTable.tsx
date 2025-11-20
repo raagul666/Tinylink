@@ -1,9 +1,8 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Link as LinkType } from '@/types';
-import { Copy, BarChart2, Trash2, Link, X } from 'lucide-react';
-import { useEffect } from "react";
+import { Copy, BarChart2, Trash2, Link, X, RefreshCw } from 'lucide-react';
 
 interface LinksTableProps {
   links: LinkType[];
@@ -16,9 +15,9 @@ export default function LinksTable({ links, onDelete, onViewStats, onRefresh }: 
   const [copiedCode, setCopiedCode] = useState<string | null>(null);
   const [statsModalOpen, setStatsModalOpen] = useState(false);
   const [selectedLink, setSelectedLink] = useState<LinkType | null>(null);
-  const [localLinks, setLocalLinks] = useState<LinkType[]>(links);
+  const [isRefreshing, setIsRefreshing] = useState(false); // ✅ NEW: Track refresh state
 
-  // ✅ ADD: Listen for custom event from Hero component
+  // Auto-refresh when new link is created
   useEffect(() => {
     const handleLinkCreated = () => {
       console.log('🔔 Link created event received, refreshing table...');
@@ -32,10 +31,12 @@ export default function LinksTable({ links, onDelete, onViewStats, onRefresh }: 
     };
   }, [onRefresh]);
 
-  // Update local links when props change
-  useState(() => {
-    setLocalLinks(links);
-  });
+  //  NEW: Manual refresh handler with animation
+  const handleManualRefresh = async () => {
+    setIsRefreshing(true);
+    await onRefresh();
+    setTimeout(() => setIsRefreshing(false), 500);
+  };
 
   const handleCopy = (code: string) => {
     const shortUrl = `${typeof window !== 'undefined' ? window.location.origin : ''}/${code}`;
@@ -49,7 +50,7 @@ export default function LinksTable({ links, onDelete, onViewStats, onRefresh }: 
     setStatsModalOpen(true);
   };
 
-  // ✅ NEW: Toggle Active/Inactive
+  //  Toggle Active/Inactive (soft delete)
   const handleToggleStatus = async (code: string, currentStatus: boolean) => {
     try {
       const res = await fetch(`/api/links/${code}`, {
@@ -59,16 +60,7 @@ export default function LinksTable({ links, onDelete, onViewStats, onRefresh }: 
       });
 
       if (res.ok) {
-        // Update local state
-        setLocalLinks((prevLinks) =>
-          prevLinks.map((link) =>
-            link.code === code ? { ...link, isActive: !currentStatus } : link
-          )
-        );
-        
-        // Refresh from server
         await onRefresh();
-        
         alert(`Link ${!currentStatus ? 'activated' : 'deactivated'} successfully!`);
       } else {
         const data = await res.json();
@@ -77,6 +69,44 @@ export default function LinksTable({ links, onDelete, onViewStats, onRefresh }: 
     } catch (error: any) {
       console.error('Error toggling status:', error);
       alert('Error updating status: ' + error.message);
+    }
+  };
+
+  // Soft delete
+  const handleSoftDelete = async (code: string) => {
+    if (!confirm(`Are you sure you want to deactivate /${code}?`)) {
+      return;
+    }
+
+    try {
+      await onDelete(code);
+      await onRefresh();
+    } catch (error: any) {
+      console.error('Error deactivating link:', error);
+    }
+  };
+
+  //  Permanent remove
+  const handlePermanentRemove = async (code: string) => {
+    if (!confirm(`⚠️ PERMANENTLY DELETE /${code}?\n\nThis will erase all data and cannot be undone!`)) {
+      return;
+    }
+
+    try {
+      const res = await fetch(`/api/links/${code}/permanent`, {
+        method: 'DELETE',
+      });
+
+      if (res.ok) {
+        await onRefresh();
+        alert('Link permanently deleted!');
+      } else {
+        const data = await res.json();
+        alert('Failed to delete: ' + (data.error || 'Unknown error'));
+      }
+    } catch (error: any) {
+      console.error('Error deleting link:', error);
+      alert('Error deleting link: ' + error.message);
     }
   };
 
@@ -101,9 +131,6 @@ export default function LinksTable({ links, onDelete, onViewStats, onRefresh }: 
     });
   };
 
-  // Use localLinks or fallback to props links
-  const displayLinks = localLinks.length > 0 ? localLinks : links;
-
   return (
     <>
       <section 
@@ -116,7 +143,7 @@ export default function LinksTable({ links, onDelete, onViewStats, onRefresh }: 
           className="w-full mx-auto px-4 sm:px-6 lg:px-8"
           style={{ maxWidth: '75rem' }}
         >
-          {/* Header WITHOUT Refresh Button */}
+          {/*  UPDATED: Header WITH Refresh Button */}
           <div className="flex items-center justify-between mb-8">
             <div>
               <h2 
@@ -131,13 +158,43 @@ export default function LinksTable({ links, onDelete, onViewStats, onRefresh }: 
                   color: 'var(--text-secondary)'
                 }}
               >
-                {displayLinks.length} {displayLinks.length === 1 ? 'link' : 'links'}
+                {links.length} {links.length === 1 ? 'link' : 'links'}
               </p>
             </div>
-            {/* Refresh button was here—now removed */}
+
+            {/*  NEW: Refresh Button */}
+            <button
+              onClick={handleManualRefresh}
+              disabled={isRefreshing}
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '0.5rem',
+                padding: '0.75rem 1.25rem',
+                backgroundColor: 'transparent',
+                border: '1px solid var(--border-light)',
+                borderRadius: '0.5rem',
+                color: 'var(--text-secondary)',
+                fontSize: '0.875rem',
+                fontWeight: 600,
+                cursor: isRefreshing ? 'not-allowed' : 'pointer',
+                transition: 'all 0.2s',
+                opacity: isRefreshing ? 0.6 : 1
+              }}
+              title="Refresh links"
+            >
+              <RefreshCw 
+                size={16} 
+                style={{
+                  animation: isRefreshing ? 'spin 1s linear infinite' : 'none'
+                }}
+              />
+              <span>Refresh</span>
+            </button>
           </div>
+
           {/* Empty State OR Table */}
-          {displayLinks.length === 0 ? (
+          {links.length === 0 ? (
             <div 
               className="flex flex-col items-center justify-center"
               style={{ 
@@ -218,7 +275,7 @@ export default function LinksTable({ links, onDelete, onViewStats, onRefresh }: 
                     </tr>
                   </thead>
                   <tbody>
-                    {displayLinks.map((link) => (
+                    {links.map((link) => (
                       <tr 
                         key={link.code}
                         style={{ borderBottom: '1px solid var(--border-light)' }}
@@ -291,7 +348,7 @@ export default function LinksTable({ links, onDelete, onViewStats, onRefresh }: 
                           </span>
                         </td>
 
-                        {/* Status - ✅ CLICKABLE TO TOGGLE */}
+                        {/* Status - Clickable to toggle */}
                         <td style={{ padding: '1.25rem 1rem', textAlign: 'center' }}>
                           <button
                             onClick={() => handleToggleStatus(link.code, link.isActive)}
@@ -330,7 +387,7 @@ export default function LinksTable({ links, onDelete, onViewStats, onRefresh }: 
                         <td style={{ padding: '1.25rem 1rem' }}>
                           <div className="flex items-center justify-center gap-2">
                             {/* Stats Button */}
-                            <button
+                                                        <button
                               onClick={() => handleViewStats(link)}
                               className="flex items-center gap-1.5"
                               style={{
@@ -350,26 +407,46 @@ export default function LinksTable({ links, onDelete, onViewStats, onRefresh }: 
                               <span>Stats</span>
                             </button>
 
-                            {/* Delete Button */}
-                            <button
-                              onClick={() => {
-                                if (confirm(`Are you sure you want to delete /${link.code}?`)) {
-                                  onDelete(link.code);
-                                }
-                              }}
-                              style={{
-                                padding: '0.5rem',
-                                borderRadius: '0.375rem',
-                                backgroundColor: 'transparent',
-                                border: '1px solid var(--border-light)',
-                                color: '#dc2626',
-                                cursor: 'pointer',
-                                transition: 'all 0.2s'
-                              }}
-                              title="Delete"
-                            >
-                              <Trash2 size={16} />
-                            </button>
+                            {/* Delete Button (Soft Delete for Active, Permanent Delete for Inactive) */}
+                            {link.isActive ? (
+                              <button
+                                onClick={() => handleSoftDelete(link.code)}
+                                style={{
+                                  padding: '0.5rem',
+                                  borderRadius: '0.375rem',
+                                  backgroundColor: 'transparent',
+                                  border: '1px solid var(--border-light)',
+                                  color: '#dc2626',
+                                  cursor: 'pointer',
+                                  transition: 'all 0.2s'
+                                }}
+                                title="Deactivate Link"
+                              >
+                                <Trash2 size={16} />
+                              </button>
+                            ) : (
+                              <button
+                                onClick={() => handlePermanentRemove(link.code)}
+                                style={{
+                                  padding: '0.5rem 0.75rem',
+                                  borderRadius: '0.375rem',
+                                  backgroundColor: '#dc2626',
+                                  border: 'none',
+                                  color: 'white',
+                                  cursor: 'pointer',
+                                  transition: 'all 0.2s',
+                                  fontSize: '0.75rem',
+                                  fontWeight: 600,
+                                  display: 'flex',
+                                  alignItems: 'center',
+                                  gap: '0.25rem'
+                                }}
+                                title="Permanently Delete"
+                              >
+                                <X size={14} />
+                                Remove
+                              </button>
+                            )}
                           </div>
                         </td>
                       </tr>
@@ -442,6 +519,7 @@ export default function LinksTable({ links, onDelete, onViewStats, onRefresh }: 
                 <X size={20} />
               </button>
             </div>
+
             {/* Modal Body */}
             <div style={{ padding: '1.5rem' }}>
               {/* Stats Grid */}
@@ -460,6 +538,7 @@ export default function LinksTable({ links, onDelete, onViewStats, onRefresh }: 
                     {selectedLink.clicks || 0}
                   </p>
                 </div>
+
                 {/* Status */}
                 <div style={{ 
                   padding: '1rem', 
@@ -475,6 +554,7 @@ export default function LinksTable({ links, onDelete, onViewStats, onRefresh }: 
                   </p>
                 </div>
               </div>
+
               {/* Link Details */}
               <div style={{ marginBottom: '1.5rem' }}>
                 <p style={{ fontSize: '0.75rem', fontWeight: 600, color: '#6b7280', marginBottom: '0.5rem', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
@@ -501,6 +581,7 @@ export default function LinksTable({ links, onDelete, onViewStats, onRefresh }: 
                   {selectedLink.url}
                 </a>
               </div>
+
               <div style={{ marginBottom: '1.5rem' }}>
                 <p style={{ fontSize: '0.75rem', fontWeight: 600, color: '#6b7280', marginBottom: '0.5rem', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
                   Created Date
@@ -509,6 +590,7 @@ export default function LinksTable({ links, onDelete, onViewStats, onRefresh }: 
                   {formatDate(selectedLink.createdAt)}
                 </p>
               </div>
+
               <div style={{ marginBottom: '1.5rem' }}>
                 <p style={{ fontSize: '0.75rem', fontWeight: 600, color: '#6b7280', marginBottom: '0.5rem', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
                   Last Clicked
@@ -517,6 +599,7 @@ export default function LinksTable({ links, onDelete, onViewStats, onRefresh }: 
                   {formatDateTime(selectedLink.lastClickedAt)}
                 </p>
               </div>
+
               {/* Action Buttons */}
               <div style={{ display: 'flex', gap: '0.75rem' }}>
                 <button
@@ -560,6 +643,18 @@ export default function LinksTable({ links, onDelete, onViewStats, onRefresh }: 
           </div>
         </div>
       )}
+
+      {/* ✅ ADD: CSS for spin animation */}
+      <style jsx>{`
+        @keyframes spin {
+          from {
+            transform: rotate(0deg);
+          }
+          to {
+            transform: rotate(360deg);
+          }
+        }
+      `}</style>
     </>
   );
 }

@@ -23,9 +23,8 @@ export default function Hero() {
       return;
     }
 
-    // Validate custom code format if provided
-    if (customCode && !/^[A-Za-z0-9]{3,8}$/.test(customCode)) {
-      setError('Custom code must be 3-8 characters (letters and numbers only)');
+    if (customCode && !/^[A-Za-z0-9]{6,8}$/.test(customCode)) {
+      setError('Custom code must be 6-8 characters (letters and numbers only)');
       return;
     }
 
@@ -34,7 +33,7 @@ export default function Hero() {
     setShortUrl('');
 
     try {
-      const res = await fetch('/api/shorten', {
+      const res = await fetch('/api/links', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ 
@@ -52,6 +51,7 @@ export default function Hero() {
       setShortUrl(`${origin}/${data.code}`);
       setUrl('');
       setCustomCode('');
+
       setTimeout(() => {
         window.dispatchEvent(new CustomEvent('linkCreated'));
       }, 500); 
@@ -65,6 +65,11 @@ export default function Hero() {
   const handleCopy = () => {
     navigator.clipboard.writeText(shortUrl);
     alert('Copied to clipboard!');
+    
+    // ✅ Auto-hide the success box after 2 seconds
+    setTimeout(() => {
+      setShortUrl('');
+    }, 2000);
   };
 
   return (
@@ -79,40 +84,29 @@ export default function Hero() {
         padding: '3rem 1rem',
       }}
     >
-      <div style={{ width: '100%', maxWidth: '42rem', textAlign: 'center' }}>
-        {/* Logo */}
-        <h1
-          style={{
-            fontSize: '3rem',
-            fontWeight: 800,
-            marginBottom: '1rem',
-            color: '#ffffff',
-            letterSpacing: '-0.025em',
-            textShadow: '0 2px 4px rgba(0,0,0,0.1)'
-          }}
-        >
-          TinyLink
-        </h1>
-
+      <div style={{ width: '100%', maxWidth: '46rem', textAlign: 'center' }}>
         {/* Tagline */}
-        <div style={{ marginBottom: '3rem' }}>
+        <div style={{ marginBottom: '2.5rem' }}>
           <h2
             style={{
-              fontSize: '2rem',
-              fontWeight: 700,
+              fontSize: '2.75rem',
+              fontWeight: 800,
               color: '#ffffff',
               marginBottom: '0.75rem',
-              textShadow: '0 1px 3px rgba(0,0,0,0.1)'
+              textShadow: '0 2px 8px rgba(0,0,0,0.12)',
+              lineHeight: 1.1
             }}
           >
-            Shorten Your <span style={{ color: '#e0e7ff' }}>Long Links :)</span>
+            Shorten Your <span style={{ color: '#fde047' }}>Long Links :)</span>
           </h2>
           <p
             style={{
-              fontSize: '1rem',
+              fontSize: '1.125rem',
               color: 'rgba(255, 255, 255, 0.95)',
-              maxWidth: '32rem',
+              maxWidth: '36rem',
               margin: '0 auto',
+              lineHeight: 1.5,
+              fontWeight: 500
             }}
           >
             TinyLink is an efficient and easy-to-use URL shortening service that streamlines
@@ -124,9 +118,9 @@ export default function Hero() {
         <div
           style={{
             backgroundColor: 'white',
-            borderRadius: '1rem',
+            borderRadius: '1.125rem',
             padding: '2rem',
-            boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.1)',
+            boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)',
             border: '1px solid rgba(0, 0, 0, 0.05)',
           }}
         >
@@ -136,7 +130,7 @@ export default function Hero() {
               style={{
                 display: 'flex',
                 alignItems: 'center',
-                gap: '0.75rem',
+                gap: '0.875rem',
                 backgroundColor: '#f9fafb',
                 border: '2px solid #e5e7eb',
                 borderRadius: '0.75rem',
@@ -144,7 +138,7 @@ export default function Hero() {
                 transition: 'all 0.2s',
               }}
             >
-              <LinkIcon size={20} style={{ color: '#9ca3af' }} />
+              <LinkIcon size={22} style={{ color: '#9ca3af' }} />
               <input
                 type="url"
                 placeholder="Enter the link here"
@@ -155,7 +149,7 @@ export default function Hero() {
                   flex: 1,
                   border: 'none',
                   outline: 'none',
-                  fontSize: '1rem',
+                  fontSize: '1.0625rem',
                   backgroundColor: 'transparent',
                   color: '#1f2937',
                 }}
@@ -163,28 +157,28 @@ export default function Hero() {
             </div>
           </div>
 
-          {/* Custom Code Input (Optional) */}
-          <div style={{ marginBottom: '1.5rem' }}>
+          {/* Custom Code Input */}
+          <div style={{ marginBottom: '1.25rem' }}>
             <input
               type="text"
-              placeholder="Custom short code (optional, 3-8 chars)"
+              placeholder="Custom short code (optional, 6-8 chars)"
               value={customCode}
               onChange={(e) => setCustomCode(e.target.value.replace(/[^A-Za-z0-9]/g, ''))}
               onKeyPress={(e) => e.key === 'Enter' && handleShorten()}
               maxLength={8}
               style={{
                 width: '100%',
-                padding: '0.875rem 1rem',
+                padding: '1rem 1.125rem',
                 border: '2px solid #e5e7eb',
                 borderRadius: '0.75rem',
-                fontSize: '0.875rem',
+                fontSize: '0.9375rem',
                 backgroundColor: '#f9fafb',
                 outline: 'none',
                 transition: 'all 0.2s',
               }}
             />
-            <p style={{ fontSize: '0.75rem', color: '#6b7280', marginTop: '0.5rem', textAlign: 'left' }}>
-              Leave empty for auto-generated • 3-8 chars • Letters & numbers only
+            <p style={{ fontSize: '0.8125rem', color: '#6b7280', marginTop: '0.5rem', textAlign: 'left' }}>
+              Leave empty for auto-generated • 6-8 chars • Letters & numbers only
             </p>
           </div>
 
@@ -198,6 +192,7 @@ export default function Hero() {
                 borderRadius: '0.5rem',
                 fontSize: '0.875rem',
                 marginBottom: '1rem',
+                fontWeight: 600
               }}
             >
               {error}
@@ -210,42 +205,42 @@ export default function Hero() {
             disabled={loading}
             style={{
               width: '100%',
-              padding: '1rem',
+              padding: '1.125rem',
               backgroundColor: '#667eea',
               color: 'white',
               border: 'none',
               borderRadius: '0.75rem',
-              fontSize: '1rem',
-              fontWeight: 600,
+              fontSize: '1.0625rem',
+              fontWeight: 700,
               cursor: loading ? 'not-allowed' : 'pointer',
               opacity: loading ? 0.6 : 1,
               transition: 'all 0.2s',
-              boxShadow: '0 4px 6px -1px rgba(102, 126, 234, 0.3)',
+              boxShadow: '0 6px 20px -4px rgba(102, 126, 234, 0.5)',
             }}
           >
             {loading ? 'Shortening...' : 'Shorten Now!'}
           </button>
 
-          {/* Short URL Result */}
+          {/* Short URL Result - Auto-hides after copy */}
           {shortUrl && (
             <div
               style={{
                 marginTop: '1.5rem',
                 padding: '1.25rem',
-                backgroundColor: '#ede9fe',
+                backgroundColor: '#fef3c7',
                 borderRadius: '0.75rem',
-                border: '1px solid #c7d2fe',
+                border: '2px solid #fbbf24',
               }}
             >
               <p
                 style={{
-                  fontSize: '0.875rem',
-                  color: '#5b21b6',
-                  fontWeight: 600,
-                  marginBottom: '0.75rem',
+                  fontSize: '0.9375rem',
+                  color: '#92400e',
+                  fontWeight: 700,
+                  marginBottom: '0.875rem',
                 }}
               >
-                Your shortened link is ready!
+                ✨ Your shortened link is ready!
               </p>
               <div style={{ display: 'flex', gap: '0.75rem' }}>
                 <input
@@ -254,25 +249,25 @@ export default function Hero() {
                   readOnly
                   style={{
                     flex: 1,
-                    padding: '0.75rem',
+                    padding: '0.8125rem',
                     backgroundColor: 'white',
-                    border: '1px solid #c7d2fe',
+                    border: '2px solid #fbbf24',
                     borderRadius: '0.5rem',
-                    fontSize: '0.875rem',
-                    color: '#5b21b6',
-                    fontWeight: 600,
+                    fontSize: '0.9375rem',
+                    color: '#92400e',
+                    fontWeight: 700,
                   }}
                 />
                 <button
                   onClick={handleCopy}
                   style={{
-                    padding: '0.75rem 1.5rem',
+                    padding: '0.8125rem 1.5rem',
                     backgroundColor: '#667eea',
                     color: 'white',
                     border: 'none',
                     borderRadius: '0.5rem',
-                    fontSize: '0.875rem',
-                    fontWeight: 600,
+                    fontSize: '0.9375rem',
+                    fontWeight: 700,
                     cursor: 'pointer',
                     whiteSpace: 'nowrap',
                   }}
