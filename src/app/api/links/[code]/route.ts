@@ -1,11 +1,33 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 
-// PATCH: Update link status (e.g., deactivate)
-export async function PATCH(request: NextRequest, context: { params: Promise<{ code: string }> }) {
+// GET: fetch link by code
+export async function GET(
+  request: NextRequest,
+  { params }: { params: Promise<{ code: string }> }
+) {
+  const { code } = await params;
+
+  const link = await prisma.link.findUnique({ where: { code } });
+
+  if (!link) {
+    return NextResponse.json(
+      { error: 'Link not found' },
+      { status: 404 }
+    );
+  }
+
+  return NextResponse.json(link);
+}
+
+// PATCH: update isActive
+export async function PATCH(
+  request: NextRequest,
+  { params }: { params: Promise<{ code: string }> }
+) {
   try {
     const { isActive } = await request.json();
-    const { code } = await context.params; // Await here
+    const { code } = await params;
 
     const updatedLink = await prisma.link.update({
       where: { code },
@@ -22,9 +44,13 @@ export async function PATCH(request: NextRequest, context: { params: Promise<{ c
   }
 }
 
-export async function DELETE(request: NextRequest, context: { params: Promise<{ code: string }> }) {
+// DELETE: delete link by code
+export async function DELETE(
+  request: NextRequest,
+  { params }: { params: Promise<{ code: string }> }
+) {
   try {
-    const { code } = await context.params; // Await here
+    const { code } = await params;
 
     const link = await prisma.link.findUnique({ where: { code } });
     if (!link) {
@@ -34,9 +60,7 @@ export async function DELETE(request: NextRequest, context: { params: Promise<{ 
       );
     }
 
-    await prisma.link.delete({
-      where: { code },
-    });
+    await prisma.link.delete({ where: { code } });
 
     return NextResponse.json({
       message: 'Link deleted successfully',
@@ -50,4 +74,3 @@ export async function DELETE(request: NextRequest, context: { params: Promise<{ 
     );
   }
 }
-
